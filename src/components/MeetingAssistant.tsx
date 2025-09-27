@@ -23,7 +23,9 @@ import {
   Activity,
   Zap,
   MessageSquare,
-  CheckCircle
+  CheckCircle,
+  Sun,
+  Moon
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
@@ -47,6 +49,7 @@ const MeetingAssistant = () => {
   const [questionResponse, setQuestionResponse] = useState<QuestionResponse | null>(null);
   const [toneHistory, setToneHistory] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const windowRef = useRef<HTMLDivElement>(null);
   const analysisIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const keepAliveRef = useRef<NodeJS.Timeout | null>(null);
@@ -81,6 +84,15 @@ const MeetingAssistant = () => {
     patterns: ["Ready to analyze"],
     improvements: ["Start speaking to get feedback"]
   });
+
+  // Toggle theme
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   // Real-time voice analysis - analyze more frequently
   useEffect(() => {
@@ -321,7 +333,7 @@ const MeetingAssistant = () => {
       }}
       onMouseDown={handleMouseDown}
     >
-      <Card className="bg-glass/90 border-glass-border shadow-glass backdrop-blur-xl">
+      <Card className={`${isDarkMode ? 'dark' : ''} bg-glass/90 border-glass-border shadow-glass backdrop-blur-xl`}>
         {/* Header */}
         <div className="drag-handle flex items-center justify-between p-4 border-b border-glass-border cursor-move">
           <div className="flex items-center gap-2">
@@ -341,6 +353,14 @@ const MeetingAssistant = () => {
             )}
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6 hover:bg-secondary"
+              onClick={() => setIsDarkMode(!isDarkMode)}
+            >
+              {isDarkMode ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
+            </Button>
             <Button
               size="icon"
               variant="ghost"
