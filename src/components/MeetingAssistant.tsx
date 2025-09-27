@@ -333,20 +333,20 @@ const MeetingAssistant = () => {
       }}
       onMouseDown={handleMouseDown}
     >
-      <Card className={`${isDarkMode ? 'dark' : ''} bg-glass/90 border-glass-border shadow-glass backdrop-blur-xl`}>
+      <Card className={`${isDarkMode ? 'bg-slate-900/85' : 'bg-white/85'} border ${isDarkMode ? 'border-slate-700' : 'border-gray-200'} shadow-2xl backdrop-blur-xl`}>
         {/* Header */}
-        <div className="drag-handle flex items-center justify-between p-4 border-b border-glass-border cursor-move">
+        <div className={`drag-handle flex items-center justify-between p-4 border-b ${isDarkMode ? 'border-slate-700' : 'border-gray-200'} cursor-move`}>
           <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-destructive animate-pulse' : 'bg-muted'}`} />
-            <span className="text-sm font-semibold text-glass-foreground">AI Meeting Assistant</span>
+            <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-red-500 animate-pulse' : isDarkMode ? 'bg-slate-600' : 'bg-gray-400'}`} />
+            <span className={`text-sm font-semibold ${isDarkMode ? 'text-slate-100' : 'text-gray-900'}`}>AI Meeting Assistant</span>
             {isAnalyzing && (
-              <Badge variant="secondary" className="ml-2">
+              <Badge variant="secondary" className={`ml-2 ${isDarkMode ? 'bg-slate-700 text-slate-200' : 'bg-gray-100 text-gray-700'}`}>
                 <Sparkles className="h-3 w-3 mr-1 animate-pulse" />
                 Analyzing
               </Badge>
             )}
             {isListening && (
-              <Badge variant="outline" className="ml-1 bg-primary/10">
+              <Badge variant="outline" className={`ml-1 ${isDarkMode ? 'bg-blue-500/10 border-blue-400 text-blue-300' : 'bg-blue-50 border-blue-300 text-blue-700'}`}>
                 <Mic className="h-3 w-3 mr-1 animate-pulse" />
                 Live
               </Badge>
@@ -356,7 +356,7 @@ const MeetingAssistant = () => {
             <Button
               size="icon"
               variant="ghost"
-              className="h-6 w-6 hover:bg-secondary"
+              className={`h-6 w-6 hover:bg-opacity-10 ${isDarkMode ? 'text-slate-200 hover:bg-slate-400' : 'text-gray-700 hover:bg-gray-600'}`}
               onClick={() => setIsDarkMode(!isDarkMode)}
             >
               {isDarkMode ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
@@ -364,7 +364,7 @@ const MeetingAssistant = () => {
             <Button
               size="icon"
               variant="ghost"
-              className="h-6 w-6 hover:bg-secondary"
+              className={`h-6 w-6 hover:bg-opacity-10 ${isDarkMode ? 'text-slate-200 hover:bg-slate-400' : 'text-gray-700 hover:bg-gray-600'}`}
               onClick={() => setIsMinimized(!isMinimized)}
             >
               <Minimize2 className="h-3 w-3" />
@@ -372,7 +372,7 @@ const MeetingAssistant = () => {
             <Button
               size="icon"
               variant="ghost"
-              className="h-6 w-6 hover:bg-secondary"
+              className={`h-6 w-6 hover:bg-opacity-10 ${isDarkMode ? 'text-slate-200 hover:bg-slate-400' : 'text-gray-700 hover:bg-gray-600'}`}
               onClick={() => window.location.reload()}
             >
               <X className="h-3 w-3" />
@@ -383,14 +383,14 @@ const MeetingAssistant = () => {
         {!isMinimized && (
           <>
             {/* Recording Controls */}
-            <div className="p-4 border-b border-glass-border">
+            <div className={`p-4 border-b ${isDarkMode ? 'border-slate-700' : 'border-gray-200'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Button
                     onClick={toggleRecording}
                     variant={isRecording ? "destructive" : "default"}
                     size="sm"
-                    className={isRecording ? "" : "bg-gradient-primary hover:opacity-90"}
+                    className={isRecording ? "bg-red-500 hover:bg-red-600" : isDarkMode ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-500 hover:bg-blue-600"}
                   >
                     {isRecording ? (
                       <>
@@ -408,7 +408,7 @@ const MeetingAssistant = () => {
                     onClick={exportToPDF}
                     variant="outline"
                     size="sm"
-                    className="border-glass-border"
+                    className={isDarkMode ? "border-slate-600 text-slate-200 hover:bg-slate-700" : "border-gray-300 text-gray-700 hover:bg-gray-100"}
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Export PDF
@@ -418,24 +418,24 @@ const MeetingAssistant = () => {
               
               {/* Live Transcript & Error Display */}
               {speechError && (
-                <div className="mt-3 p-2 bg-destructive/10 rounded-lg border border-destructive/20">
+                <div className={`mt-3 p-2 rounded-lg border ${isDarkMode ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'}`}>
                   <div className="flex items-center gap-2 mb-1">
-                    <AlertCircle className="h-3 w-3 text-destructive" />
-                    <span className="text-xs font-medium">Error</span>
+                    <AlertCircle className="h-3 w-3 text-red-500" />
+                    <span className={`text-xs font-medium ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>Error</span>
                   </div>
-                  <p className="text-xs text-destructive">
+                  <p className={`text-xs ${isDarkMode ? 'text-red-300' : 'text-red-600'}`}>
                     {speechError}
                   </p>
                 </div>
               )}
               
               {isRecording && !speechError && (
-                <div className="mt-3 p-2 bg-secondary/30 rounded-lg">
+                <div className={`mt-3 p-2 rounded-lg ${isDarkMode ? 'bg-slate-700/50' : 'bg-gray-100'}`}>
                   <div className="flex items-center gap-2 mb-1">
-                    <Activity className="h-3 w-3 text-primary animate-pulse" />
-                    <span className="text-xs font-medium">Live Transcript</span>
+                    <Activity className="h-3 w-3 text-blue-500 animate-pulse" />
+                    <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-200' : 'text-gray-700'}`}>Live Transcript</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
                     {interimTranscript || (isListening ? "Listening... Please speak clearly into your microphone" : "Starting microphone...")}
                   </p>
                 </div>
@@ -444,16 +444,16 @@ const MeetingAssistant = () => {
 
             {/* Main Content */}
             <Tabs defaultValue="voice" className="p-4">
-              <TabsList className="grid w-full grid-cols-3 bg-secondary/50">
-                <TabsTrigger value="voice">
+              <TabsList className={`grid w-full grid-cols-3 ${isDarkMode ? 'bg-slate-700/50' : 'bg-gray-100'}`}>
+                <TabsTrigger value="voice" className={isDarkMode ? 'data-[state=active]:bg-slate-600' : 'data-[state=active]:bg-white'}>
                   <Volume2 className="h-4 w-4 mr-2" />
                   Voice
                 </TabsTrigger>
-                <TabsTrigger value="notes">
+                <TabsTrigger value="notes" className={isDarkMode ? 'data-[state=active]:bg-slate-600' : 'data-[state=active]:bg-white'}>
                   <FileText className="h-4 w-4 mr-2" />
                   Notes
                 </TabsTrigger>
-                <TabsTrigger value="tips">
+                <TabsTrigger value="tips" className={isDarkMode ? 'data-[state=active]:bg-slate-600' : 'data-[state=active]:bg-white'}>
                   <Lightbulb className="h-4 w-4 mr-2" />
                   Tips
                 </TabsTrigger>
@@ -461,25 +461,25 @@ const MeetingAssistant = () => {
 
               <TabsContent value="voice" className="mt-4 space-y-4">
                 {/* Tone Consistency Score */}
-                <div className="bg-gradient-to-r from-secondary/30 to-accent/20 rounded-lg p-4">
+                <div className={`rounded-lg p-4 ${isDarkMode ? 'bg-gradient-to-r from-slate-700/50 to-slate-600/30' : 'bg-gradient-to-r from-blue-50 to-purple-50'}`}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium">Tone Consistency</span>
+                      <Zap className="h-4 w-4 text-blue-500" />
+                      <span className={`text-sm font-medium ${isDarkMode ? 'text-slate-100' : 'text-gray-900'}`}>Tone Consistency</span>
                     </div>
-                    <span className="text-lg font-bold text-primary">
+                    <span className={`text-lg font-bold ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                       {consistencyAnalysis.overallConsistency}%
                     </span>
                   </div>
-                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                  <div className={`h-2 rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-600' : 'bg-gray-200'}`}>
                     <div 
-                      className="h-full bg-gradient-primary transition-all duration-1000"
+                      className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-1000"
                       style={{ width: `${consistencyAnalysis.overallConsistency}%` }}
                     />
                   </div>
                   <div className="mt-2 space-y-1">
                     {consistencyAnalysis.patterns.map((pattern, i) => (
-                      <div key={i} className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <div key={i} className={`flex items-center gap-1 text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
                         <CheckCircle className="h-3 w-3" />
                         {pattern}
                       </div>
@@ -488,37 +488,37 @@ const MeetingAssistant = () => {
                 </div>
 
                 {/* Real-time Tone Analysis */}
-                <div className="bg-secondary/30 rounded-lg p-4">
+                <div className={`rounded-lg p-4 ${isDarkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium">Current Tone</span>
-                    <Badge variant="outline" className="bg-primary/10">
+                    <span className={`text-sm font-medium ${isDarkMode ? 'text-slate-100' : 'text-gray-900'}`}>Current Tone</span>
+                    <Badge variant="outline" className={isDarkMode ? 'bg-blue-500/10 border-blue-400 text-blue-300' : 'bg-blue-50 border-blue-300 text-blue-700'}>
                       {voiceAnalysis.tone}
                     </Badge>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div className="bg-background/50 rounded p-2">
-                      <span className="text-xs text-muted-foreground">Emotion</span>
-                      <p className="text-sm font-medium">{voiceAnalysis.emotion}</p>
+                    <div className={`rounded p-2 ${isDarkMode ? 'bg-slate-800/50' : 'bg-white'}`}>
+                      <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Emotion</span>
+                      <p className={`text-sm font-medium ${isDarkMode ? 'text-slate-100' : 'text-gray-900'}`}>{voiceAnalysis.emotion}</p>
                     </div>
-                    <div className="bg-background/50 rounded p-2">
-                      <span className="text-xs text-muted-foreground">Energy</span>
-                      <p className="text-sm font-medium capitalize">{voiceAnalysis.energy}</p>
+                    <div className={`rounded p-2 ${isDarkMode ? 'bg-slate-800/50' : 'bg-white'}`}>
+                      <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Energy</span>
+                      <p className={`text-sm font-medium capitalize ${isDarkMode ? 'text-slate-100' : 'text-gray-900'}`}>{voiceAnalysis.energy}</p>
                     </div>
                   </div>
 
                   {/* Pitch Indicator */}
                   <div className="mb-3">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-muted-foreground">Pitch Level</span>
+                      <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>Pitch Level</span>
                       <div className={`flex items-center gap-1 ${pitchInfo.color}`}>
                         <pitchInfo.icon className="h-3 w-3" />
                         <span className="text-xs font-medium">{pitchInfo.message}</span>
                       </div>
                     </div>
-                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                    <div className={`h-2 rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-600' : 'bg-gray-200'}`}>
                       <div 
-                        className="h-full bg-gradient-pitch transition-all duration-500"
+                        className="h-full bg-gradient-to-r from-green-500 to-blue-500 transition-all duration-500"
                         style={{ width: `${voiceAnalysis.pitch}%` }}
                       />
                     </div>
@@ -526,25 +526,25 @@ const MeetingAssistant = () => {
 
                   {/* AI Suggestions */}
                   <div className="space-y-2">
-                    <span className="text-xs font-medium text-primary">AI Suggestions</span>
+                    <span className={`text-xs font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>AI Suggestions</span>
                     {voiceAnalysis.suggestions.map((suggestion, index) => (
                       <div key={index} className="flex items-start gap-2 text-xs">
-                        <AlertCircle className="h-3 w-3 text-accent mt-0.5" />
-                        <span className="text-muted-foreground">{suggestion}</span>
+                        <AlertCircle className={`h-3 w-3 mt-0.5 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`} />
+                        <span className={isDarkMode ? 'text-slate-300' : 'text-gray-600'}>{suggestion}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {/* Improvements */}
-                <div className="bg-accent/10 rounded-lg p-3">
+                <div className={`rounded-lg p-3 ${isDarkMode ? 'bg-amber-500/10' : 'bg-amber-50'}`}>
                   <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="h-4 w-4 text-accent" />
-                    <span className="text-xs font-medium">Areas to Improve</span>
+                    <Sparkles className={`h-4 w-4 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`} />
+                    <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-100' : 'text-gray-900'}`}>Areas to Improve</span>
                   </div>
                   <div className="space-y-1">
                     {consistencyAnalysis.improvements.map((improvement, i) => (
-                      <p key={i} className="text-xs text-muted-foreground">• {improvement}</p>
+                      <p key={i} className={`text-xs ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>• {improvement}</p>
                     ))}
                   </div>
                 </div>
@@ -555,15 +555,16 @@ const MeetingAssistant = () => {
                   placeholder="Your meeting notes will appear here automatically as you speak..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="min-h-[280px] bg-secondary/30 border-glass-border resize-none text-sm"
+                  className={`min-h-[280px] resize-none text-sm ${isDarkMode ? 'bg-slate-700/50 border-slate-600 text-slate-100 placeholder:text-slate-400' : 'bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-500'}`}
                 />
                 <div className="mt-2 flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
+                  <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                     {notes.split(' ').filter(w => w).length} words
                   </span>
                   <Button
                     size="sm"
                     variant="ghost"
+                    className={isDarkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-100'}
                     onClick={() => {
                       setNotes("");
                       resetTranscript();
