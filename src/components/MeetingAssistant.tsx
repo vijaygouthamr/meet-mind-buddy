@@ -82,33 +82,44 @@ const MeetingAssistant = () => {
     improvements: ["Start speaking to get feedback"]
   });
 
-  // Analyze voice tone when new segments are available
+  // Real-time voice analysis - analyze more frequently
   useEffect(() => {
-    if (segments.length > 0 && isRecording) {
-      const analyzeLatestSegment = async () => {
-        const latestSegment = segments[segments.length - 1];
-        if (latestSegment && latestSegment.length > 10) {
-          setIsAnalyzing(true);
-          try {
-            const analysis = await analyzeVoiceTone(latestSegment, toneHistory);
-            setVoiceAnalysis(analysis);
-            setToneHistory(prev => [...prev.slice(-4), analysis.tone]);
-            
-            // Analyze consistency every 3 segments
-            if (segments.length >= 3) {
-              const consistencyResult = await analyzeSpeechConsistency(segments.slice(-5));
-              setConsistencyAnalysis(consistencyResult);
-            }
-          } catch (error) {
-            console.error("Analysis error:", error);
-          } finally {
-            setIsAnalyzing(false);
+    if (!isRecording) return;
+    
+    const analyzeVoice = async () => {
+      // Analyze if we have recent speech (including interim)
+      const textToAnalyze = interimTranscript || (segments.length > 0 ? segments[segments.length - 1] : "");
+      
+      if (textToAnalyze && textToAnalyze.length > 15) {
+        setIsAnalyzing(true);
+        try {
+          // Analyze tone in real-time
+          const analysis = await analyzeVoiceTone(textToAnalyze, toneHistory);
+          setVoiceAnalysis(analysis);
+          
+          // Update tone history
+          if (analysis.tone !== toneHistory[toneHistory.length - 1]) {
+            setToneHistory(prev => [...prev.slice(-9), analysis.tone]);
           }
+          
+          // Analyze consistency every 2 segments for faster feedback
+          if (segments.length >= 2) {
+            const consistencyResult = await analyzeSpeechConsistency(segments.slice(-10));
+            setConsistencyAnalysis(consistencyResult);
+          }
+        } catch (error) {
+          console.error("Analysis error:", error);
+        } finally {
+          setIsAnalyzing(false);
         }
-      };
-      analyzeLatestSegment();
-    }
-  }, [segments, isRecording, toneHistory]);
+      }
+    };
+    
+    // Set up interval for real-time analysis (every 2 seconds)
+    const interval = setInterval(analyzeVoice, 2000);
+    
+    return () => clearInterval(interval);
+  }, [segments, isRecording, toneHistory, interimTranscript]);
 
   // Auto-save notes from transcript
   useEffect(() => {
@@ -120,12 +131,12 @@ const MeetingAssistant = () => {
     }
   }, [transcript]);
 
-  // Handle question analysis
+  // Real-time question analysis based on conversation
   const analyzeQuestion = async () => {
-    if (!currentQuestion) {
+    if (!currentQuestion && !transcript) {
       toast({
-        title: "No question entered",
-        description: "Please type a question to get interview coaching",
+        title: "Start speaking first",
+        description: "Begin your conversation to get contextual tips",
         variant: "destructive"
       });
       return;
@@ -133,12 +144,18 @@ const MeetingAssistant = () => {
 
     setIsAnalyzing(true);
     try {
-      const response = await getInterviewResponse(currentQuestion, transcript);
+      // Use current question or analyze the conversation for tips
+      const questionToAnalyze = currentQuestion || "Based on this conversation, what tips would help?";
+      const response = await getInterviewResponse(questionToAnalyze, transcript);
       setQuestionResponse(response);
-      toast({
-        title: "Analysis complete",
-        description: "Check the Tips tab for your personalized response strategy",
-      });
+      
+      // Don't show toast for automatic analysis
+      if (currentQuestion) {
+        toast({
+          title: "Analysis complete",
+          description: "Check the Tips tab for your personalized response strategy",
+        });
+      }
     } catch (error) {
       toast({
         title: "Analysis failed",
@@ -149,6 +166,17 @@ const MeetingAssistant = () => {
       setIsAnalyzing(false);
     }
   };
+  
+  // Auto-analyze conversation for contextual tips
+  useEffect(() => {
+    if (transcript && transcript.length > 100 && !currentQuestion) {
+      // Debounce to avoid too frequent calls
+      const timer = setTimeout(() => {
+        analyzeQuestion();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [transcript]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.drag-handle')) {
@@ -528,12 +556,22 @@ const MeetingAssistant = () => {
 
               <TabsContent value="tips" className="mt-4">
                 <div className="space-y-3">
+                  {/* Real-time Contextual Tips Header */}
+                  {transcript && (
+                    <div className="bg-gradient-to-r from-accent/20 to-primary/20 rounded-lg p-2 animate-pulse">
+                      <div className="flex items-center gap-2">
+                        <Zap className="h-3 w-3 text-primary" />
+                        <span className="text-xs font-medium">AI analyzing your conversation in real-time...</span>
+                      </div>
+                    </div>
+                  )}
+                  
                   {/* Question Input */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Interview Question</label>
+                    <label className="text-sm font-medium">Ask Interview Question (Optional)</label>
                     <div className="flex gap-2">
                       <Input
-                        placeholder="Type or paste an interview question..."
+                        placeholder="Type a question for specific tips..."
                         value={currentQuestion}
                         onChange={(e) => setCurrentQuestion(e.target.value)}
                         className="bg-secondary/30 border-glass-border"
@@ -549,11 +587,13 @@ const MeetingAssistant = () => {
                     </div>
                   </div>
 
-                  {/* Question Response */}
+                  {/* Real-time Response with Context */}
                   {questionResponse && (
                     <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg p-4 animate-slide-up">
                       <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-medium">AI Response Strategy</h4>
+                        <h4 className="text-sm font-medium">
+                          {currentQuestion ? "AI Response Strategy" : "Contextual Tips Based on Your Discussion"}
+                        </h4>
                         <Badge variant="secondary">
                           {questionResponse.confidence}% confidence
                         </Badge>
@@ -566,7 +606,9 @@ const MeetingAssistant = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <span className="text-xs font-medium text-primary">Key Tips</span>
+                        <span className="text-xs font-medium text-primary">
+                          {transcript ? "Tips Based on What You've Said" : "Key Tips"}
+                        </span>
                         {questionResponse.tips.map((tip, index) => (
                           <div key={index} className="flex items-start gap-2">
                             <CheckCircle className="h-3 w-3 text-pitch-optimal mt-0.5" />
@@ -577,14 +619,28 @@ const MeetingAssistant = () => {
                     </div>
                   )}
 
-                  {/* Quick Tips */}
+                  {/* Dynamic Word Suggestions */}
+                  {transcript && transcript.length > 50 && (
+                    <div className="bg-primary/5 rounded-lg p-3">
+                      <h4 className="text-xs font-medium mb-2 text-primary">Power Words to Use</h4>
+                      <div className="flex flex-wrap gap-1">
+                        {["achieved", "implemented", "optimized", "collaborated", "delivered", "spearheaded", "innovative", "strategic"].map(word => (
+                          <Badge key={word} variant="secondary" className="text-xs">
+                            {word}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* General Tips */}
                   <div className="bg-secondary/30 rounded-lg p-3">
-                    <h4 className="text-xs font-medium mb-2 text-primary">General Interview Tips</h4>
+                    <h4 className="text-xs font-medium mb-2 text-primary">Live Interview Tips</h4>
                     <ul className="space-y-1 text-xs text-muted-foreground">
-                      <li>• Use the STAR method for behavioral questions</li>
-                      <li>• Maintain eye contact with the camera</li>
-                      <li>• Speak 10% slower than normal conversation</li>
-                      <li>• Pause briefly before answering complex questions</li>
+                      <li>• {voiceAnalysis.tone === "nervous" ? "Take a deep breath and slow down" : "Maintain your confident tone"}</li>
+                      <li>• {voiceAnalysis.energy === "low" ? "Increase energy and enthusiasm" : "Keep your energy consistent"}</li>
+                      <li>• {transcript.includes("um") || transcript.includes("uh") ? "Reduce filler words - pause instead" : "Good job avoiding filler words"}</li>
+                      <li>• {voiceAnalysis.pitch > 65 ? "Lower your pitch slightly for authority" : voiceAnalysis.pitch < 35 ? "Raise your pitch for engagement" : "Perfect pitch level - maintain it"}</li>
                     </ul>
                   </div>
                 </div>

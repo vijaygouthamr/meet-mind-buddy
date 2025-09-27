@@ -19,31 +19,41 @@ export interface QuestionResponse {
   tips: string[];
 }
 
-// Function to analyze voice tone from audio text
+// Function to analyze voice tone from audio text with real-time feedback
 export async function analyzeVoiceTone(transcript: string, previousTones: string[]): Promise<VoiceAnalysisResult> {
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
     
     const prompt = `
-    Analyze the following speech transcript for voice tone and delivery quality.
-    Previous tones detected: ${previousTones.join(", ")}
-    Current transcript: "${transcript}"
+    Analyze this REAL-TIME speech for immediate feedback on tone, pitch, and consistency.
+    Previous tones (last 5): ${previousTones.slice(-5).join(", ") || "Starting analysis"}
+    Current speech: "${transcript}"
     
-    Provide analysis in JSON format with:
-    1. pitch: number between 0-100 (0=very low, 50=optimal, 100=very high)
-    2. tone: one of "confident", "nervous", "enthusiastic", "calm", "uncertain", "professional", "friendly"
-    3. consistency: percentage score for tone consistency with previous samples
-    4. emotion: detected primary emotion
-    5. suggestions: array of 2-3 specific actionable suggestions for improvement
-    6. energy: "low", "optimal", or "high"
+    ANALYZE FOR:
+    1. Filler words (um, uh, like, you know) - indicates nervousness
+    2. Sentence length - short = tension, long = uncertainty
+    3. Question inflection on statements - lack of confidence
+    4. Speech pace indicators - rushed words = anxiety
+    5. Power words vs weak words
+    6. Professional vocabulary usage
     
-    Focus on:
-    - Maintaining consistent tone throughout
-    - Professional delivery
-    - Clear communication
-    - Engagement level
+    Provide IMMEDIATE, ACTIONABLE feedback in JSON:
+    {
+      "pitch": number (0-100, where 40-60 is optimal, <30 too low, >70 too high),
+      "tone": string (confident/nervous/enthusiastic/calm/uncertain/professional/friendly/hesitant/assertive),
+      "consistency": number (0-100, compare with previous tones),
+      "emotion": string (calm/excited/anxious/frustrated/happy/uncertain/engaged/bored/stressed),
+      "suggestions": [3 SPECIFIC real-time tips based on actual speech content],
+      "energy": string (low/optimal/high/varies)
+    }
     
-    Return ONLY valid JSON without markdown formatting.
+    Make suggestions SPECIFIC to what was just said, like:
+    - "Remove 'um' before key points"
+    - "Slow down when explaining technical concepts"
+    - "Raise voice slightly for emphasis"
+    - "Pause between sentences for clarity"
+    
+    Return ONLY valid JSON.
     `;
 
     const result = await model.generateContent(prompt);
@@ -51,11 +61,9 @@ export async function analyzeVoiceTone(transcript: string, previousTones: string
     const text = response.text();
     
     try {
-      // Clean the response and parse JSON
       const cleanedText = text.replace(/```json|```/g, '').trim();
       return JSON.parse(cleanedText);
     } catch (parseError) {
-      // Fallback response if parsing fails
       return {
         pitch: 50,
         tone: "neutral",
@@ -75,29 +83,35 @@ export async function analyzeVoiceTone(transcript: string, previousTones: string
   }
 }
 
-// Function to get real-time interview response
+// Function to get real-time interview response based on conversation context
 export async function getInterviewResponse(question: string, context: string): Promise<QuestionResponse> {
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
     
     const prompt = `
-    You are an expert interview coach. The interviewee just received this question: "${question}"
+    You are an expert interview coach providing REAL-TIME guidance.
     
-    Context from the conversation: "${context}"
+    Question asked: "${question}"
+    What they've been discussing: "${context || 'Just started the conversation'}"
     
-    Provide a response in JSON format with:
+    Based on the ACTUAL CONVERSATION CONTEXT, provide:
     1. question: the original question
-    2. answer: a concise, professional suggested answer structure (2-3 sentences max)
-    3. confidence: confidence level for this answer (0-100)
-    4. tips: array of 2-3 specific tips for answering this question effectively
+    2. answer: A CONTEXTUAL answer that references what they've ALREADY discussed (2-3 sentences)
+    3. confidence: confidence level (0-100)
+    4. tips: 3 SPECIFIC tips using words and topics from their actual conversation
     
-    Focus on:
-    - STAR method where applicable (Situation, Task, Action, Result)
-    - Being specific and concise
-    - Highlighting relevant skills
-    - Showing enthusiasm and cultural fit
+    Make it CONTEXTUAL:
+    - If they mentioned specific projects, reference those
+    - If they used certain terminology, incorporate it
+    - If they showed expertise in an area, leverage it
+    - Suggest specific words and phrases to use based on the discussion
     
-    Return ONLY valid JSON without markdown formatting.
+    Example contextual tips:
+    - "Since you mentioned [specific project], elaborate on the challenges you overcame"
+    - "Use the technical term [X] you mentioned earlier to show expertise"
+    - "Connect this to your experience with [Y] you just discussed"
+    
+    Return ONLY valid JSON.
     `;
 
     const result = await model.generateContent(prompt);

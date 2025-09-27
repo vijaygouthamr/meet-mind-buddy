@@ -69,17 +69,25 @@ export const useSpeechRecognition = (): SpeechRecognitionHook => {
         console.log('Final transcript:', finalText);
         setTranscript(prev => prev + finalText);
         
-        // Add to segments for analysis
+        // Add to segments for analysis - more frequent segments for real-time analysis
         setSegments(prev => {
           const newSegments = [...prev, finalText.trim()];
-          // Keep only last 10 segments for analysis
-          return newSegments.slice(-10);
+          // Keep only last 20 segments for better analysis
+          return newSegments.slice(-20);
         });
 
         // Reset segment timeout
         if (segmentTimeoutRef.current) {
           clearTimeout(segmentTimeoutRef.current);
         }
+      }
+
+      // Also add interim text to segments for faster analysis
+      if (interimText && interimText.length > 20) {
+        setSegments(prev => {
+          const newSegments = [...prev, interimText.trim()];
+          return newSegments.slice(-20);
+        });
       }
 
       setInterimTranscript(interimText);
