@@ -46,6 +46,7 @@ const MeetingAssistant = () => {
   const [position, setPosition] = useState({ x: 20, y: 20 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [currentQuestion, setCurrentQuestion] = useState("");
+  const [detectedQuestion, setDetectedQuestion] = useState<string | null>(null);
   const [questionResponse, setQuestionResponse] = useState<QuestionResponse | null>(null);
   const [toneHistory, setToneHistory] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -53,6 +54,7 @@ const MeetingAssistant = () => {
   const windowRef = useRef<HTMLDivElement>(null);
   const analysisIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const keepAliveRef = useRef<NodeJS.Timeout | null>(null);
+  const conversationContextRef = useRef<string>("");
   
   const {
     transcript,
@@ -94,7 +96,7 @@ const MeetingAssistant = () => {
     }
   }, [isDarkMode]);
 
-  // Real-time voice analysis - analyze more frequently
+  // Real-time voice analysis and question detection
   useEffect(() => {
     if (!isRecording) return;
     
@@ -104,7 +106,22 @@ const MeetingAssistant = () => {
       
       if (textToAnalyze && textToAnalyze.length > 15) {
         setIsAnalyzing(true);
+        
+        // Update conversation context
+        conversationContextRef.current = segments.slice(-5).join(' ');
+        
         try {
+          // Check if this is a question
+          const isQuestion = /\?|^(what|when|where|who|why|how|can|could|would|should|is|are|do|does|did|will|have|has|tell me|describe|explain)/i.test(textToAnalyze);
+          
+          if (isQuestion) {
+            setDetectedQuestion(textToAnalyze);
+            
+            // Get AI response for the detected question
+            const response = await getInterviewResponse(textToAnalyze, conversationContextRef.current);
+            setQuestionResponse(response);
+          }
+          
           // Analyze tone in real-time
           const analysis = await analyzeVoiceTone(textToAnalyze, toneHistory);
           setVoiceAnalysis(analysis);
@@ -577,68 +594,106 @@ const MeetingAssistant = () => {
 
               <TabsContent value="tips" className="mt-4">
                 <div className="space-y-3">
-                  {/* Real-time Contextual Tips Header */}
-                  {transcript && (
-                    <div className="bg-gradient-to-r from-accent/20 to-primary/20 rounded-lg p-2 animate-pulse">
-                      <div className="flex items-center gap-2">
-                        <Zap className="h-3 w-3 text-primary" />
-                        <span className="text-xs font-medium">AI analyzing your conversation in real-time...</span>
+                  {/* Question Detection Alert */}
+                  {detectedQuestion && (
+                    <div className={`rounded-lg p-3 border animate-slide-up ${
+                      isDarkMode 
+                        ? 'bg-blue-900/20 border-blue-700' 
+                        : 'bg-blue-50/80 border-blue-200'
+                    }`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <AlertCircle className="h-4 w-4 text-blue-500" />
+                        <span className={`text-sm font-medium ${
+                          isDarkMode ? 'text-blue-300' : 'text-blue-700'
+                        }`}>Question Detected!</span>
                       </div>
+                      <p className={`text-xs ${isDarkMode ? 'text-blue-200' : 'text-blue-600'}`}>
+                        "{detectedQuestion}"
+                      </p>
                     </div>
                   )}
-                  
-                  {/* Question Input */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Ask Interview Question (Optional)</label>
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Type a question for specific tips..."
-                        value={currentQuestion}
-                        onChange={(e) => setCurrentQuestion(e.target.value)}
-                        className="bg-secondary/30 border-glass-border"
-                      />
-                      <Button
-                        onClick={analyzeQuestion}
-                        disabled={isAnalyzing}
-                        size="sm"
-                        className="bg-gradient-primary"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
 
                   {/* Real-time Response with Context */}
                   {questionResponse && (
-                    <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg p-4 animate-slide-up">
+                    <div className={`rounded-lg p-4 ${
+                      isDarkMode 
+                        ? 'bg-gradient-to-r from-blue-900/20 to-purple-900/20' 
+                        : 'bg-gradient-to-r from-blue-50 to-purple-50'
+                    }`}>
                       <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-medium">
-                          {currentQuestion ? "AI Response Strategy" : "Contextual Tips Based on Your Discussion"}
+                        <h4 className={`text-sm font-medium ${
+                          isDarkMode ? 'text-gray-100' : 'text-gray-900'
+                        }`}>
+                          🎯 AI Response Strategy
                         </h4>
-                        <Badge variant="secondary">
+                        <Badge className={`${
+                          questionResponse.confidence >= 80 
+                            ? 'bg-green-500/20 text-green-500'
+                            : questionResponse.confidence >= 60
+                            ? 'bg-yellow-500/20 text-yellow-500'
+                            : 'bg-orange-500/20 text-orange-500'
+                        }`}>
                           {questionResponse.confidence}% confidence
                         </Badge>
                       </div>
                       
-                      <div className="bg-background/50 rounded p-3 mb-3">
-                        <p className="text-sm text-foreground">
+                      <div className={`rounded p-3 mb-3 ${
+                        isDarkMode ? 'bg-slate-800/50' : 'bg-white/80'
+                      }`}>
+                        <p className={`text-sm font-medium mb-1 ${
+                          isDarkMode ? 'text-gray-200' : 'text-gray-800'
+                        }`}>
+                          Suggested Response:
+                        </p>
+                        <p className={`text-sm ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                        }`}>
                           {questionResponse.answer}
                         </p>
                       </div>
 
                       <div className="space-y-2">
-                        <span className="text-xs font-medium text-primary">
-                          {transcript ? "Tips Based on What You've Said" : "Key Tips"}
+                        <span className={`text-xs font-medium ${
+                          isDarkMode ? 'text-blue-300' : 'text-blue-700'
+                        }`}>
+                          💬 Response Tips:
                         </span>
                         {questionResponse.tips.map((tip, index) => (
                           <div key={index} className="flex items-start gap-2">
-                            <CheckCircle className="h-3 w-3 text-pitch-optimal mt-0.5" />
-                            <span className="text-xs text-muted-foreground">{tip}</span>
+                            <CheckCircle className="h-3 w-3 text-green-500 mt-0.5" />
+                            <span className={`text-xs ${
+                              isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                            }`}>{tip}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
+
+                  {/* Manual Question Input */}
+                  <div className="space-y-2">
+                    <label className={`text-sm font-medium ${
+                      isDarkMode ? 'text-gray-200' : 'text-gray-700'
+                    }`}>
+                      Or Ask Any Question
+                    </label>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Type a question for specific tips..."
+                        value={currentQuestion}
+                        onChange={(e) => setCurrentQuestion(e.target.value)}
+                        className={isDarkMode ? 'bg-slate-700/30 border-slate-600' : 'bg-gray-100 border-gray-300'}
+                      />
+                      <Button
+                        onClick={analyzeQuestion}
+                        disabled={isAnalyzing}
+                        size="sm"
+                        className={isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'}
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
 
                   {/* Dynamic Word Suggestions */}
                   {transcript && transcript.length > 50 && (
