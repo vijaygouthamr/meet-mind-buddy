@@ -19,6 +19,15 @@ export interface QuestionResponse {
   tips: string[];
 }
 
+export interface PostureAnalysisResult {
+  overallPosture: 'excellent' | 'good' | 'needs improvement' | 'poor';
+  score: number;
+  issues: string[];
+  improvements: string[];
+  bodyLanguage: string;
+  confidence: number;
+}
+
 // Function to analyze voice tone from audio text with real-time feedback
 export async function analyzeVoiceTone(transcript: string, previousTones: string[]): Promise<VoiceAnalysisResult> {
   try {
@@ -183,6 +192,79 @@ export async function analyzeSpeechConsistency(audioTranscripts: string[]): Prom
     }
   } catch (error) {
     console.error("Gemini API error:", error);
+    throw error;
+  }
+}
+
+// Function to analyze body posture from webcam image
+export async function analyzeBodyPosture(imageBase64: string): Promise<PostureAnalysisResult> {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const prompt = `
+    Analyze this person's body posture and body language in a professional meeting context.
+    
+    EVALUATE:
+    1. Overall posture (sitting/standing position)
+    2. Shoulder position (slouched, tense, relaxed)
+    3. Head position (straight, tilted, forward)
+    4. Eye contact with camera
+    5. Facial expression
+    6. Hand position and gestures
+    7. Professional appearance
+    8. Confidence indicators
+    
+    Provide ACTIONABLE feedback in JSON:
+    {
+      "overallPosture": string (excellent/good/needs improvement/poor),
+      "score": number (0-100),
+      "issues": [list 2-3 specific posture issues observed],
+      "improvements": [list 3-4 specific, actionable improvements],
+      "bodyLanguage": string (brief description of what the body language conveys),
+      "confidence": number (0-100, based on posture and body language)
+    }
+    
+    Make improvements SPECIFIC and immediately actionable:
+    - "Straighten your shoulders by rolling them back"
+    - "Lift your chin slightly to improve eye contact"
+    - "Relax your hands on the desk to appear more confident"
+    - "Sit back in your chair for better posture"
+    
+    Return ONLY valid JSON.
+    `;
+
+    const result = await model.generateContent([
+      prompt,
+      {
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: imageBase64.split(',')[1] // Remove data:image/jpeg;base64, prefix
+        }
+      }
+    ]);
+    
+    const response = await result.response;
+    const text = response.text();
+    
+    try {
+      const cleanedText = text.replace(/```json|```/g, '').trim();
+      return JSON.parse(cleanedText);
+    } catch (parseError) {
+      return {
+        overallPosture: 'good',
+        score: 70,
+        issues: ["Unable to analyze posture clearly"],
+        improvements: [
+          "Ensure good lighting for camera",
+          "Sit upright with shoulders back",
+          "Maintain eye contact with camera"
+        ],
+        bodyLanguage: "Professional and engaged",
+        confidence: 70
+      };
+    }
+  } catch (error) {
+    console.error("Gemini API posture analysis error:", error);
     throw error;
   }
 }
