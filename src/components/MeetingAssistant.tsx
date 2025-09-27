@@ -213,20 +213,51 @@ const MeetingAssistant = () => {
     };
   }, [webcamStream]);
 
-  // Real-time voice analysis and question detection
+  // Real-time voice analysis with continuous updates
+  useEffect(() => {
+    if (isListening) {
+      // Analyze voice more frequently for real-time fluctuations
+      const analyzeCurrentVoice = async () => {
+        // Use both the current interim transcript and the last segment for real-time analysis
+        const currentText = interimTranscript || segments[segments.length - 1] || "";
+        
+        if (currentText && currentText.length > 5) {
+          try {
+            const analysis = await analyzeVoiceTone(currentText, toneHistory);
+            setVoiceAnalysis(prev => ({
+              ...analysis,
+              // Smooth transitions for visual feedback
+              pitch: Math.round((prev.pitch * 0.3 + analysis.pitch * 0.7)),
+              consistency: Math.round((prev.consistency * 0.4 + analysis.consistency * 0.6))
+            }));
+            
+            // Only update tone history for significant segments
+            if (segments.length > toneHistory.length) {
+              setToneHistory(prev => [...prev.slice(-10), analysis.tone]);
+            }
+          } catch (error) {
+            console.error("Voice analysis error:", error);
+          }
+        }
+      };
+      
+      // Start continuous analysis interval
+      const intervalId = setInterval(analyzeCurrentVoice, 1500); // Analyze every 1.5 seconds
+      
+      // Also trigger immediate analysis when segments change
+      if (segments.length > 0) {
+        analyzeCurrentVoice();
+      }
+      
+      return () => clearInterval(intervalId);
+    }
+  }, [isListening, interimTranscript, segments, toneHistory]);
+
+  // Question detection with improved patterns
   useEffect(() => {
     if (isListening && transcript && segments.length > 0) {
       const lastSegment = segments[segments.length - 1];
       
-      // Run voice tone analysis
-      analyzeVoiceTone(lastSegment, toneHistory)
-        .then(analysis => {
-          setVoiceAnalysis(analysis);
-          setToneHistory(prev => [...prev, analysis.tone]);
-        })
-        .catch(console.error);
-
-      // Question detection with improved patterns
       const questionIndicators = [
         /\b(what|where|when|why|how|who|which|can|could|would|should|is|are|do|does|did|have|has|will)\b.*\?/i,
         /\b(tell me|explain|describe|share|talk about|thoughts on|opinion on|experience with)\b/i,
@@ -252,7 +283,7 @@ const MeetingAssistant = () => {
           .catch(console.error);
       }
     }
-  }, [segments, isListening, transcript, toneHistory]);
+  }, [segments, isListening, transcript]);
 
   // Auto-save notes from transcript
   useEffect(() => {

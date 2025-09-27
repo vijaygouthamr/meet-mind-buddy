@@ -33,34 +33,72 @@ export async function analyzeVoiceTone(transcript: string, previousTones: string
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
     
+    // Calculate speech characteristics for more dynamic analysis
+    const words = transcript.split(' ').filter(w => w.length > 0);
+    const avgWordLength = words.reduce((acc, w) => acc + w.length, 0) / (words.length || 1);
+    const hasFillerWords = /\b(um|uh|like|you know|basically|actually|literally)\b/gi.test(transcript);
+    const hasQuestionMark = transcript.includes('?');
+    const isShortBurst = words.length < 5;
+    const isLongSentence = words.length > 20;
+    
     const prompt = `
-    Analyze this REAL-TIME speech for immediate feedback on tone, pitch, and consistency.
-    Previous tones (last 5): ${previousTones.slice(-5).join(", ") || "Starting analysis"}
-    Current speech: "${transcript}"
+    Analyze this REAL-TIME speech segment for vocal characteristics and communication effectiveness.
     
-    ANALYZE FOR:
-    1. Filler words (um, uh, like, you know) - indicates nervousness
-    2. Sentence length - short = tension, long = uncertainty
-    3. Question inflection on statements - lack of confidence
-    4. Speech pace indicators - rushed words = anxiety
-    5. Power words vs weak words
-    6. Professional vocabulary usage
+    SPEECH SEGMENT: "${transcript}"
     
-    Provide IMMEDIATE, ACTIONABLE feedback in JSON:
+    CONTEXT:
+    - Previous tones (last 5): ${previousTones.slice(-5).join(", ") || "Starting analysis"}
+    - Word count: ${words.length}
+    - Average word length: ${avgWordLength.toFixed(1)}
+    - Contains filler words: ${hasFillerWords}
+    - Question pattern: ${hasQuestionMark}
+    - Segment type: ${isShortBurst ? 'short burst' : isLongSentence ? 'long sentence' : 'normal length'}
+    
+    ANALYZE FOR REALISTIC VOICE PATTERNS:
+    1. PITCH (0-100):
+       - Nervous/uncertain: 65-85 (higher pitch)
+       - Confident/assertive: 35-55 (lower, steady)
+       - Excited/enthusiastic: 55-75 (varied)
+       - Tired/bored: 25-40 (low, monotone)
+       - Questions naturally rise: +10-20 points
+       - Filler words indicate: +5-10 points (nervousness)
+    
+    2. TONE CLASSIFICATION:
+       - Based on word choice, sentence structure, and context
+       - Consider: confident, nervous, enthusiastic, calm, uncertain, professional, friendly, hesitant, assertive, engaging
+    
+    3. ENERGY LEVEL:
+       - Short bursts + questions = high energy or nervousness
+       - Long sentences + filler words = uncertainty or rambling
+       - Medium length + clear words = optimal energy
+    
+    4. EMOTION DETECTION:
+       - Map to realistic emotions based on speech patterns
+       - Consider: calm, excited, anxious, frustrated, happy, uncertain, engaged, bored, stressed, focused
+    
+    5. CONSISTENCY SCORE:
+       - Compare with previous tones
+       - Natural variation is 70-90%
+       - Too consistent (95-100%) might indicate monotone
+       - Too inconsistent (<50%) might indicate nervousness
+    
+    Provide DYNAMIC, REALISTIC feedback in JSON:
     {
-      "pitch": number (0-100, where 40-60 is optimal, <30 too low, >70 too high),
-      "tone": string (confident/nervous/enthusiastic/calm/uncertain/professional/friendly/hesitant/assertive),
-      "consistency": number (0-100, compare with previous tones),
-      "emotion": string (calm/excited/anxious/frustrated/happy/uncertain/engaged/bored/stressed),
-      "suggestions": [3 SPECIFIC real-time tips based on actual speech content],
+      "pitch": number (fluctuate realistically based on content, 0-100),
+      "tone": string (most appropriate from the list above),
+      "consistency": number (0-100, natural variation expected),
+      "emotion": string (current emotional state),
+      "suggestions": [3 SPECIFIC, actionable tips based on THIS exact speech],
       "energy": string (low/optimal/high/varies)
     }
     
-    Make suggestions SPECIFIC to what was just said, like:
-    - "Remove 'um' before key points"
-    - "Slow down when explaining technical concepts"
-    - "Raise voice slightly for emphasis"
-    - "Pause between sentences for clarity"
+    Make pitch FLUCTUATE naturally:
+    - Questions should show rising pitch
+    - Statements should be steady
+    - Nervousness shows in higher, varying pitch
+    - Confidence shows in lower, steady pitch
+    
+    Make suggestions ULTRA-SPECIFIC to what was just said.
     
     Return ONLY valid JSON.
     `;
