@@ -49,6 +49,7 @@ const MeetingAssistant = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const windowRef = useRef<HTMLDivElement>(null);
   const analysisIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const keepAliveRef = useRef<NodeJS.Timeout | null>(null);
   
   const {
     transcript,
@@ -57,7 +58,9 @@ const MeetingAssistant = () => {
     startListening,
     stopListening,
     resetTranscript,
-    segments
+    segments,
+    error: speechError,
+    isSupported
   } = useSpeechRecognition();
 
   const [voiceAnalysis, setVoiceAnalysis] = useState<VoiceAnalysisResult>({
@@ -181,14 +184,32 @@ const MeetingAssistant = () => {
     }
   }, [isDragging, dragStart]);
 
-  const toggleRecording = () => {
+  const toggleRecording = async () => {
+    if (!isSupported) {
+      toast({
+        title: "Browser not supported",
+        description: "Please use Chrome, Edge, or Safari for voice recording",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!isRecording) {
       setIsRecording(true);
-      startListening();
-      toast({
-        title: "Recording started",
-        description: "Voice analysis active - Gemini AI is listening",
-      });
+      try {
+        await startListening();
+        toast({
+          title: "Recording started",
+          description: "Voice analysis active - Gemini AI is listening",
+        });
+      } catch (error) {
+        setIsRecording(false);
+        toast({
+          title: "Failed to start recording",
+          description: speechError || "Please check microphone permissions",
+          variant: "destructive"
+        });
+      }
     } else {
       setIsRecording(false);
       stopListening();
@@ -284,6 +305,12 @@ const MeetingAssistant = () => {
                 Analyzing
               </Badge>
             )}
+            {isListening && (
+              <Badge variant="outline" className="ml-1 bg-primary/10">
+                <Mic className="h-3 w-3 mr-1 animate-pulse" />
+                Live
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <Button
@@ -341,15 +368,27 @@ const MeetingAssistant = () => {
                 </div>
               </div>
               
-              {/* Live Transcript */}
-              {isRecording && (
+              {/* Live Transcript & Error Display */}
+              {speechError && (
+                <div className="mt-3 p-2 bg-destructive/10 rounded-lg border border-destructive/20">
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertCircle className="h-3 w-3 text-destructive" />
+                    <span className="text-xs font-medium">Error</span>
+                  </div>
+                  <p className="text-xs text-destructive">
+                    {speechError}
+                  </p>
+                </div>
+              )}
+              
+              {isRecording && !speechError && (
                 <div className="mt-3 p-2 bg-secondary/30 rounded-lg">
                   <div className="flex items-center gap-2 mb-1">
                     <Activity className="h-3 w-3 text-primary animate-pulse" />
                     <span className="text-xs font-medium">Live Transcript</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {interimTranscript || "Listening..."}
+                    {interimTranscript || (isListening ? "Listening... Please speak clearly into your microphone" : "Starting microphone...")}
                   </p>
                 </div>
               )}
